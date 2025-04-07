@@ -130,7 +130,8 @@ export default function FollowersList({
               {filtered.map((user: any) => (
                 <li
                   key={user.handle}
-                  className="flex items-center justify-between p-3 hover:bg-muted/50"
+                  className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
+                  onClick={() => toggleSelect(user.handle)}
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
@@ -156,7 +157,12 @@ export default function FollowersList({
                   <Checkbox
                     id={`select-${user.handle}`}
                     checked={selected.includes(user.handle)}
-                    onCheckedChange={() => toggleSelect(user.handle)}
+                    onCheckedChange={() => {
+                      // Prevent the click event from propagating to the li element
+                      // to avoid double toggling
+                      event?.stopPropagation();
+                      toggleSelect(user.handle);
+                    }}
                   />
                 </li>
               ))}
