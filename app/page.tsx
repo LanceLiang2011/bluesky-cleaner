@@ -4,12 +4,7 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import {
-  handleLogin,
-  getFollowerState,
-  handleUnfollow,
-  clearSession,
-} from "./actions";
+import { handleLogin, handleUnfollow, clearSession } from "./actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
@@ -39,24 +34,6 @@ export default function HomePage() {
   const [unfollowLoading, setUnfollowLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const checkLoginStatus = async () => {
-      try {
-        const result = await getFollowerState();
-        if (result) {
-          setData(result);
-          setIsLoggedIn(true);
-        }
-      } catch (error) {
-        // Not logged in or session expired
-        setIsLoggedIn(false);
-      }
-    };
-
-    checkLoginStatus();
-  }, []);
-
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -82,8 +59,13 @@ export default function HomePage() {
       const result = await handleLogin(formData);
 
       if (result.success) {
-        const followerData = await getFollowerState();
-        setData(followerData);
+        // Use the data returned directly from the login response
+        setData({
+          followers: result.followers,
+          following: result.following,
+          handle: result.handle,
+          session: result.session,
+        });
         setIsLoggedIn(true);
         setRequires2FA(false); // Reset 2FA mode
         setTotpCode(""); // Clear TOTP code
@@ -127,7 +109,13 @@ export default function HomePage() {
   const unfollowSelected = async () => {
     setUnfollowLoading(true);
     try {
-      await handleUnfollow(selected);
+      // Pass the session from the data state
+      if (!data || !data.session) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      await handleUnfollow(data.session, selected);
       toast.success("Unfollowed successfully!");
 
       // Update local state instead of refetching all data

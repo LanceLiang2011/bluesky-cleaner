@@ -3,11 +3,6 @@
 
 import { loginAndFetch, unfollowUsers } from "@/lib/bsk";
 
-// Store only the session, not user credentials
-let sessionCache: any = null;
-// Store followers/following data but not credentials
-let stateCache: any = null;
-
 export async function handleLogin(formData: FormData) {
   try {
     let handle = formData.get("handle") as string;
@@ -41,16 +36,14 @@ export async function handleLogin(formData: FormData) {
       };
     }
 
-    // Only cache the session and data, not the credentials
-    sessionCache = result.session;
-    stateCache = {
-      handle, // We need to keep the handle for API calls
-      followers: result.followers,
-      following: result.following,
-    };
-
+    // Only store in the response, not in cache
+    // Disabled caching - don't store in sessionCache/stateCache
     return {
       success: true,
+      session: result.session,
+      handle,
+      followers: result.followers,
+      following: result.following,
     };
   } catch (error: any) {
     console.error("Login error:", error.message, error.status, error.error);
@@ -95,18 +88,19 @@ export async function handleLogin(formData: FormData) {
   }
 }
 
-export async function getFollowerState() {
-  return stateCache;
-}
-
-export async function handleUnfollow(handles: string[]) {
+export async function handleUnfollow(session: any, handles: string[]) {
   try {
-    if (!sessionCache) {
-      throw new Error("Session expired. Please login again.");
+    // Since we're not using caching, we need the session to be passed explicitly
+    if (!handles || !handles.length) {
+      throw new Error("No handles provided to unfollow.");
     }
 
-    // Pass only the session token and handles to unfollow, no credentials
-    await unfollowUsers(sessionCache, handles);
+    if (!session) {
+      throw new Error("Session not provided. Please login again.");
+    }
+
+    // Pass the session token and handles to unfollow
+    await unfollowUsers(session, handles);
 
     return { success: true };
   } catch (error: any) {
@@ -117,9 +111,8 @@ export async function handleUnfollow(handles: string[]) {
   }
 }
 
-// Add a function to clear session data on logout
+// Add a function to clear session data on logout - not needed since we're not caching
 export async function clearSession() {
-  sessionCache = null;
-  stateCache = null;
+  // No need to clear cache as we're not using it
   return { success: true };
 }
