@@ -85,7 +85,9 @@ export default function HomePage() {
     setIsLoggedIn(false);
     setData(null);
     setSelected([]);
-    // We don't clear handle and password so they're preserved for next login
+    // Show success message when logging out
+    toast.success("Logged out successfully");
+    // No need to clear handle and password so they're preserved for next login
   };
 
   const unfollowSelected = async () => {
