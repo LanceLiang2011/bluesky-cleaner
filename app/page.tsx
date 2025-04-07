@@ -217,6 +217,15 @@ export default function HomePage() {
                           )}
                         </button>
                       </div>
+                      <a
+                        href="https://bsky.app/settings/app-passwords"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-muted-foreground hover:text-primary transition-colors inline-flex items-center mt-1"
+                      >
+                        You can use an App Password instead of your main
+                        password for better security
+                      </a>
                     </div>
                   </>
                 )}
