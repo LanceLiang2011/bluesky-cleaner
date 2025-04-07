@@ -57,13 +57,6 @@ export default function HomePage() {
     checkLoginStatus();
   }, []);
 
-  useEffect(() => {
-    // Log whenever 2FA state changes
-    if (requires2FA) {
-      console.log("2FA mode activated in UI");
-    }
-  }, [requires2FA]);
-
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -84,14 +77,9 @@ export default function HomePage() {
         formData.set("handle", handle);
         formData.set("password", password);
         formData.set("totpCode", totpCode);
-        console.log("Submitting with 2FA code");
       }
 
       const result = await handleLogin(formData);
-      console.log("Login result:", {
-        success: result.success,
-        requires2FA: result.requires2FA,
-      });
 
       if (result.success) {
         const followerData = await getFollowerState();

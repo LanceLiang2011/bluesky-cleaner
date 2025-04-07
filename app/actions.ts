@@ -14,13 +14,6 @@ export async function handleLogin(formData: FormData) {
     const password = formData.get("password") as string;
     const totpCode = formData.get("totpCode") as string;
 
-    console.log(
-      "Login attempt for:",
-      handle,
-      "with 2FA code:",
-      totpCode ? "provided" : "not provided"
-    );
-
     // Check if we have the required credentials
     if (!handle || !password) {
       console.error("Missing credentials:", {
@@ -41,7 +34,6 @@ export async function handleLogin(formData: FormData) {
     const result = await loginAndFetch(handle, password, totpCode || undefined);
 
     if (result.requires2FA) {
-      console.log("2FA required for account:", handle);
       return {
         success: false,
         requires2FA: true,
@@ -57,7 +49,6 @@ export async function handleLogin(formData: FormData) {
       following: result.following,
     };
 
-    console.log("Login successful for:", handle);
     return {
       success: true,
     };

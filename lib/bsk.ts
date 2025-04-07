@@ -9,34 +9,22 @@ export async function loginAndFetch(
   const agent = new BskyAgent({ service: "https://bsky.social" });
 
   try {
-    // Login to get session, now with optional 2FA/TOTP code
-    const loginResponse = await agent.login({
+    // SECURITY: We directly pass the credentials to the API without storing them
+    await agent.login({
       identifier: handle,
       password,
-
-      ...(totpCode ? { authFactorToken: totpCode } : {}), // Include TOTP if provided
+      ...(totpCode ? { authFactorToken: totpCode } : {}),
     });
 
-    // Log the login response to help debug 2FA issues
-    console.log("Login response:", JSON.stringify(loginResponse, null, 2));
-
-    // Create a clean session object that doesn't contain the password
+    // SECURITY: Create a clean session object without the password or any sensitive data
     const session = {
       did: agent.session?.did,
       handle: agent.session?.handle,
       accessJwt: agent.session?.accessJwt,
       refreshJwt: agent.session?.refreshJwt,
-      // No password or other sensitive data
     };
 
-    // Log session info for debugging (without sensitive tokens)
-    console.log(
-      "Session established for:",
-      session.handle,
-      "with DID:",
-      session.did
-    );
-
+    // Fetch data with authenticated session
     const following = [];
     let cursor: string | undefined;
     while (true) {
@@ -61,23 +49,22 @@ export async function loginAndFetch(
       cursor = res.data.cursor;
     }
 
+    // SECURITY: We only return what's needed, no credentials
     return {
       followers,
       following,
-      session, // Return only the filtered session data
+      session, // Clean session object without password
       requires2FA: false,
     };
   } catch (error: any) {
-    // Log the full error details to better understand the issue
-    console.error("Login error details:", {
+    // SECURITY: Don't log the full error which might contain sensitive info
+    console.error("Login error:", {
       status: error.status,
       message: error.message,
-      error: error.error,
-      stack: error.stack,
-      fullError: error,
+      type: error.name,
     });
 
-    // Enhanced 2FA detection - check for known patterns in different types of 2FA responses
+    // 2FA detection logic
     if (
       error.status === 401 &&
       (error.message?.toLowerCase().includes("totp") ||
@@ -89,11 +76,9 @@ export async function loginAndFetch(
         error.error?.toLowerCase().includes("totp") ||
         (error.data &&
           error.data.error?.toLowerCase().includes("authentication")) ||
-        // Some specific error messages seen with email-based 2FA
         error.message?.toLowerCase().includes("email") ||
         error.message?.toLowerCase().includes("verify"))
     ) {
-      console.log("2FA requirement detected");
       return {
         followers: [],
         following: [],
@@ -109,9 +94,10 @@ export async function unfollowUsers(
   agentSession: AtpSessionData,
   handlesToUnfollow: string[]
 ) {
+  // SECURITY: We only use the session tokens, never credentials
   const agent = new BskyAgent({ service: "https://bsky.social" });
 
-  // Resume session using only the tokens, not credentials
+  // SECURITY: Only use the pre-established session
   await agent.resumeSession(agentSession);
 
   for (const handle of handlesToUnfollow) {
