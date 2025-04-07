@@ -12,8 +12,21 @@ export async function handleLogin(formData: FormData) {
   try {
     let handle = formData.get("handle") as string;
     const password = formData.get("password") as string;
+    const totpCode = formData.get("totpCode") as string;
 
+    console.log(
+      "Login attempt for:",
+      handle,
+      "with 2FA code:",
+      totpCode ? "provided" : "not provided"
+    );
+
+    // Check if we have the required credentials
     if (!handle || !password) {
+      console.error("Missing credentials:", {
+        handle: !!handle,
+        password: !!password,
+      });
       return {
         success: false,
         error: "Username and password are required",
@@ -25,23 +38,48 @@ export async function handleLogin(formData: FormData) {
       handle = handle.slice(1);
     }
 
-    const { followers, following, session } = await loginAndFetch(
-      handle,
-      password
-    );
+    const result = await loginAndFetch(handle, password, totpCode || undefined);
+
+    if (result.requires2FA) {
+      console.log("2FA required for account:", handle);
+      return {
+        success: false,
+        requires2FA: true,
+        error: "Two-factor authentication code required",
+      };
+    }
 
     // Only cache the session and data, not the credentials
-    sessionCache = session;
+    sessionCache = result.session;
     stateCache = {
       handle, // We need to keep the handle for API calls
-      followers,
-      following,
+      followers: result.followers,
+      following: result.following,
     };
 
+    console.log("Login successful for:", handle);
     return {
       success: true,
     };
   } catch (error: any) {
+    console.error("Login error:", error.message, error.status, error.error);
+
+    // Improved error handling for 2FA-related errors
+    if (
+      (error.status === 401 || error.status === 400) &&
+      (error.message?.toLowerCase().includes("authentication") ||
+        error.message?.toLowerCase().includes("verification") ||
+        error.message?.toLowerCase().includes("2fa") ||
+        error.message?.toLowerCase().includes("totp") ||
+        error.message?.toLowerCase().includes("email"))
+    ) {
+      return {
+        success: false,
+        requires2FA: true,
+        error: "Two-factor authentication code required",
+      };
+    }
+
     // Handle specific error types based on error message or code
     if (error.status === 401 || error.message?.includes("authentication")) {
       return {
