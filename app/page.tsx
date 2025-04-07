@@ -4,7 +4,12 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import { handleLogin, getFollowerState, handleUnfollow } from "./actions";
+import {
+  handleLogin,
+  getFollowerState,
+  handleUnfollow,
+  clearSession,
+} from "./actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
@@ -81,10 +86,15 @@ export default function HomePage() {
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clear server-side session first
+    await clearSession();
+
+    // Then update local state
     setIsLoggedIn(false);
     setData(null);
     setSelected([]);
+
     // Show success message when logging out
     toast.success("Logged out successfully");
     // No need to clear handle and password so they're preserved for next login

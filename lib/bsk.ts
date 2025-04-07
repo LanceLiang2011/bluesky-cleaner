@@ -3,10 +3,20 @@ import { BskyAgent, AtpSessionData } from "@atproto/api";
 export async function loginAndFetch(handle: string, password: string) {
   const agent = new BskyAgent({ service: "https://bsky.social" });
 
+  // Login to get session, but don't store credentials
   await agent.login({
     identifier: handle,
     password,
   });
+
+  // Create a clean session object that doesn't contain the password
+  const session = {
+    did: agent.session?.did,
+    handle: agent.session?.handle,
+    accessJwt: agent.session?.accessJwt,
+    refreshJwt: agent.session?.refreshJwt,
+    // No password or other sensitive data
+  };
 
   const following = [];
   let cursor: string | undefined;
@@ -35,7 +45,7 @@ export async function loginAndFetch(handle: string, password: string) {
   return {
     followers,
     following,
-    session: agent.session,
+    session, // Return only the filtered session data
   };
 }
 
@@ -44,6 +54,8 @@ export async function unfollowUsers(
   handlesToUnfollow: string[]
 ) {
   const agent = new BskyAgent({ service: "https://bsky.social" });
+
+  // Resume session using only the tokens, not credentials
   await agent.resumeSession(agentSession);
 
   for (const handle of handlesToUnfollow) {

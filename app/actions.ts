@@ -3,9 +3,9 @@
 
 import { loginAndFetch, unfollowUsers } from "@/lib/bsk";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Store only the session, not user credentials
 let sessionCache: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Store followers/following data but not credentials
 let stateCache: any = null;
 
 export async function handleLogin(formData: FormData) {
@@ -30,9 +30,13 @@ export async function handleLogin(formData: FormData) {
       password
     );
 
-    // Cache the session and state
+    // Only cache the session and data, not the credentials
     sessionCache = session;
-    stateCache = { handle, followers, following };
+    stateCache = {
+      handle, // We need to keep the handle for API calls
+      followers,
+      following,
+    };
 
     return {
       success: true,
@@ -72,7 +76,9 @@ export async function handleUnfollow(handles: string[]) {
       throw new Error("Session expired. Please login again.");
     }
 
+    // Pass only the session token and handles to unfollow, no credentials
     await unfollowUsers(sessionCache, handles);
+
     return { success: true };
   } catch (error: any) {
     return {
@@ -80,4 +86,11 @@ export async function handleUnfollow(handles: string[]) {
       error: error.message || "Failed to unfollow users. Please try again.",
     };
   }
+}
+
+// Add a function to clear session data on logout
+export async function clearSession() {
+  sessionCache = null;
+  stateCache = null;
+  return { success: true };
 }
