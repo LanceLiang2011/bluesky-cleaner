@@ -45,6 +45,20 @@ export default function FollowersList({
     setSelected(all);
   };
 
+  const unselectAll = () => {
+    // Remove filtered users from selection
+    const filteredHandles = new Set(filtered.map((f: any) => f.handle));
+    const remainingSelected = selected.filter(
+      (handle) => !filteredHandles.has(handle)
+    );
+    setSelected(remainingSelected);
+  };
+
+  // Check if all filtered users are already selected
+  const isAllSelected =
+    filtered.length > 0 &&
+    filtered.every((f: any) => selected.includes(f.handle));
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -98,10 +112,10 @@ export default function FollowersList({
           <Button
             variant="ghost"
             size="sm"
-            onClick={selectAll}
+            onClick={isAllSelected ? unselectAll : selectAll}
             className="text-sm"
           >
-            Select All
+            {isAllSelected ? "Unselect All" : "Select All"}
           </Button>
         </div>
       </CardHeader>
