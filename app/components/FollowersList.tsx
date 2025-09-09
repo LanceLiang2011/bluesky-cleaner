@@ -248,7 +248,9 @@ export default function FollowersList({
       </CardHeader>
       <CardContent>
         <div className="border rounded-md h-80 overflow-y-auto">
-          {enablePostFilter && loadingDetailedProfiles && !detailedProfiles?.length ? (
+          {enablePostFilter &&
+          loadingDetailedProfiles &&
+          !detailedProfiles?.length ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
