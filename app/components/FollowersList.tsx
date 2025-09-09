@@ -27,7 +27,7 @@ export default function FollowersList({
   session: any;
   onFetchDetailedProfiles: (session: any, handles: string[]) => Promise<any[]>;
 }) {
-  const [showNonFollowers, setShowNonFollowers] = useState(true);
+  const [showNonFollowers, setShowNonFollowers] = useState(false);
   const [maxPostCount, setMaxPostCount] = useState([100]); // Array for Slider value
   const [enablePostFilter, setEnablePostFilter] = useState(false);
   const [search, setSearch] = useState("");
