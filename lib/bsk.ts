@@ -9,7 +9,7 @@ export async function loginAndFetch(
 ) {
   // Determine the service URL based on the handle
   let serviceUrl = "https://bsky.social";
-  
+
   // If handle contains a custom domain, try to detect the service
   if (handle.includes(".") && !handle.endsWith(".bsky.social")) {
     // For custom domains, we might need to resolve the service

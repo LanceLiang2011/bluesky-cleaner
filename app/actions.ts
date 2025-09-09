@@ -81,7 +81,8 @@ export async function handleLogin(formData: FormData) {
     if (error.status === 429) {
       return {
         success: false,
-        error: "Too many login attempts. Please wait a few minutes and try again.",
+        error:
+          "Too many login attempts. Please wait a few minutes and try again.",
       };
     }
 
@@ -90,13 +91,15 @@ export async function handleLogin(formData: FormData) {
       if (error.message?.toLowerCase().includes("app password")) {
         return {
           success: false,
-          error: "Please use an App Password instead of your regular password. Generate one in your Bluesky settings.",
+          error:
+            "Please use an App Password instead of your regular password. Generate one in your Bluesky settings.",
         };
       }
-      
+
       return {
         success: false,
-        error: "Invalid username or password. Make sure you're using an App Password if you have 2FA enabled.",
+        error:
+          "Invalid username or password. Make sure you're using an App Password if you have 2FA enabled.",
       };
     }
 
