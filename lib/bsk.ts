@@ -7,7 +7,17 @@ export async function loginAndFetch(
   password: string,
   totpCode?: string
 ) {
-  const agent = new BskyAgent({ service: "https://bsky.social" });
+  // Determine the service URL based on the handle
+  let serviceUrl = "https://bsky.social";
+  
+  // If handle contains a custom domain, try to detect the service
+  if (handle.includes(".") && !handle.endsWith(".bsky.social")) {
+    // For custom domains, we might need to resolve the service
+    // For now, we'll assume bsky.social but this could be enhanced
+    serviceUrl = "https://bsky.social";
+  }
+
+  const agent = new BskyAgent({ service: serviceUrl });
 
   try {
     // SECURITY: We directly pass the credentials to the API without storing them

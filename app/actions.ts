@@ -31,6 +31,14 @@ export async function handleLogin(formData: FormData) {
       handle = handle.slice(1);
     }
 
+    // Normalize handle format - ensure it has a domain
+    if (!handle.includes(".")) {
+      handle = `${handle}.bsky.social`;
+    }
+
+    // Trim whitespace
+    handle = handle.trim().toLowerCase();
+
     const result = await loginAndFetch(handle, password, totpCode || undefined);
 
     if (result.requires2FA) {
@@ -69,11 +77,33 @@ export async function handleLogin(formData: FormData) {
       };
     }
 
-    // Handle specific error types based on error message or code
-    if (error.status === 401 || error.message?.includes("authentication")) {
+    // Handle specific error types with more helpful messages
+    if (error.status === 429) {
       return {
         success: false,
-        error: "Invalid username or password",
+        error: "Too many login attempts. Please wait a few minutes and try again.",
+      };
+    }
+
+    if (error.status === 401) {
+      // More specific error messages for authentication failures
+      if (error.message?.toLowerCase().includes("app password")) {
+        return {
+          success: false,
+          error: "Please use an App Password instead of your regular password. Generate one in your Bluesky settings.",
+        };
+      }
+      
+      return {
+        success: false,
+        error: "Invalid username or password. Make sure you're using an App Password if you have 2FA enabled.",
+      };
+    }
+
+    if (error.status === 400) {
+      return {
+        success: false,
+        error: "Invalid request format. Please check your username format.",
       };
     }
 
@@ -82,6 +112,13 @@ export async function handleLogin(formData: FormData) {
       return {
         success: false,
         error: "Network error. Please check your connection and try again.",
+      };
+    }
+
+    if (error.message?.includes("fetch")) {
+      return {
+        success: false,
+        error: "Connection failed. Please check your internet connection.",
       };
     }
 
