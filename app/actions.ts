@@ -31,13 +31,17 @@ export async function handleLogin(formData: FormData) {
       handle = handle.slice(1);
     }
 
-    // Normalize handle format - ensure it has a domain
-    if (!handle.includes(".")) {
-      handle = `${handle}.bsky.social`;
-    }
-
-    // Trim whitespace
-    handle = handle.trim().toLowerCase();
+    // Clean handle from invisible Unicode characters and normalize
+    handle = handle
+      .trim()
+      .toLowerCase()
+      // Remove invisible Unicode characters like U+202C (Pop Directional Formatting)
+      .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F]/g, '')
+      // Remove other common invisible characters
+      .replace(/[\u00A0\u1680\u2000-\u200A\u2028\u2029\u205F\u3000]/g, ' ')
+      // Clean up multiple spaces
+      .replace(/\s+/g, ' ')
+      .trim();
 
     const result = await loginAndFetch(handle, password, totpCode || undefined);
 
