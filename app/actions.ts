@@ -44,7 +44,6 @@ export async function handleLogin(formData: FormData) {
       handle,
       followers: result.followers,
       following: result.following,
-      detailedProfiles: result.detailedProfiles || [], // Include detailed profiles from login
     };
   } catch (error: any) {
     console.error("Login error:", error.message, error.status, error.error);

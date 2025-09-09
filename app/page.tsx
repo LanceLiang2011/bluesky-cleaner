@@ -39,7 +39,6 @@ export default function HomePage() {
   const [unfollowLoading, setUnfollowLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
-  const [detailedProfilesLoading, setDetailedProfilesLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,8 +72,6 @@ export default function HomePage() {
           handle: result.handle,
           session: result.session,
         });
-        // Set detailed profiles from the login response
-        setDetailedProfiles(result.detailedProfiles || []);
         setIsLoggedIn(true);
         setRequires2FA(false); // Reset 2FA mode
         setTotpCode(""); // Clear TOTP code
@@ -100,22 +97,32 @@ export default function HomePage() {
   }
 
   const handleLogout = async () => {
-    // Clear server-side session first
     await clearSession();
-
-    // Then update local state
     setIsLoggedIn(false);
     setData(null);
     setSelected([]);
     setDetailedProfiles([]);
-
-    // Show success message when logging out
-    toast.success("Logged out successfully");
-    // No need to clear handle and password so they're preserved for next login
-    setRequires2FA(false); // Reset 2FA mode
-    setTotpCode(""); // Clear TOTP code
+    setHandle("");
+    setPassword("");
+    setTotpCode("");
+    setRequires2FA(false);
+    toast.success("Successfully logged out!");
   };
 
+  const fetchDetailedProfiles = async (session: any, handles: string[]) => {
+    try {
+      const result = await handleGetDetailedProfiles(session, handles);
+      if (result.success) {
+        return result.profiles;
+      } else {
+        throw new Error(result.error || "Failed to fetch detailed profiles");
+      }
+    } catch (error: any) {
+      console.error("Error fetching detailed profiles:", error);
+      toast.error("Failed to load detailed profiles");
+      throw error;
+    }
+  };
   const unfollowSelected = async () => {
     setUnfollowLoading(true);
     try {
@@ -333,7 +340,8 @@ export default function HomePage() {
                     following={data.following}
                     selected={selected}
                     setSelected={setSelected}
-                    detailedProfiles={detailedProfiles}
+                    session={data.session}
+                    onFetchDetailedProfiles={fetchDetailedProfiles}
                   />
                   <Button
                     onClick={unfollowSelected}

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,18 +17,64 @@ export default function FollowersList({
   followers,
   selected,
   setSelected,
-  detailedProfiles,
+  session,
+  onFetchDetailedProfiles,
 }: {
   following: any[];
   followers: any[];
   selected: string[];
   setSelected: (selected: string[]) => void;
-  detailedProfiles?: any[];
+  session: any;
+  onFetchDetailedProfiles: (session: any, handles: string[]) => Promise<any[]>;
 }) {
   const [showNonFollowers, setShowNonFollowers] = useState(true);
   const [maxPostCount, setMaxPostCount] = useState([100]); // Array for Slider value
   const [enablePostFilter, setEnablePostFilter] = useState(false);
   const [search, setSearch] = useState("");
+  const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
+  const [loadingDetailedProfiles, setLoadingDetailedProfiles] = useState(false);
+  const [detailedProfilesError, setDetailedProfilesError] = useState<
+    string | null
+  >(null);
+
+  const fetchDetailedProfiles = useCallback(async () => {
+    if (!session || loadingDetailedProfiles) return;
+
+    setLoadingDetailedProfiles(true);
+    setDetailedProfilesError(null);
+
+    try {
+      const handles = following.map((f: any) => f.handle);
+      console.log(`Fetching detailed profiles for ${handles.length} users...`);
+
+      const profiles = await onFetchDetailedProfiles(session, handles);
+      setDetailedProfiles(profiles);
+      console.log(`Successfully loaded ${profiles.length} detailed profiles`);
+    } catch (error) {
+      console.error("Failed to fetch detailed profiles:", error);
+      setDetailedProfilesError(
+        "Failed to load detailed profiles. Please try again."
+      );
+    } finally {
+      setLoadingDetailedProfiles(false);
+    }
+  }, [session, loadingDetailedProfiles, following, onFetchDetailedProfiles]);
+
+  // Fetch detailed profiles when post filter is enabled
+  useEffect(() => {
+    if (
+      enablePostFilter &&
+      detailedProfiles.length === 0 &&
+      !loadingDetailedProfiles
+    ) {
+      fetchDetailedProfiles();
+    }
+  }, [
+    enablePostFilter,
+    detailedProfiles.length,
+    loadingDetailedProfiles,
+    fetchDetailedProfiles,
+  ]);
 
   const followerHandles = new Set(followers.map((f: any) => f.handle));
 
@@ -173,11 +219,9 @@ export default function FollowersList({
                 </div>
               </div>
             )}
-            {enablePostFilter && !detailedProfiles?.length && (
-              <div className="text-xs text-muted-foreground">
-                <span className="text-muted-foreground">
-                  Loading detailed profiles to enable filtering...
-                </span>
+            {detailedProfilesError && (
+              <div className="text-xs text-red-500">
+                {detailedProfilesError}
               </div>
             )}
           </div>
@@ -204,7 +248,14 @@ export default function FollowersList({
       </CardHeader>
       <CardContent>
         <div className="border rounded-md h-80 overflow-y-auto">
-          {filtered.length === 0 ? (
+          {enablePostFilter && loadingDetailedProfiles && !detailedProfiles?.length ? (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <span>Loading detailed profiles to enable filtering...</span>
+              </div>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               No users found
             </div>
