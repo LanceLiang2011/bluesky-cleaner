@@ -135,6 +135,35 @@ export async function unfollowUsers(
   }
 }
 
+export async function blockUsers(
+  agentSession: AtpSessionData,
+  handlesToBlock: string[]
+) {
+  // SECURITY: We only use the session tokens, never credentials
+  const agent = new BskyAgent({ service: "https://bsky.social" });
+
+  // SECURITY: Only use the pre-established session
+  await agent.resumeSession(agentSession);
+
+  for (const handle of handlesToBlock) {
+    const profile = await agent.api.app.bsky.actor.getProfile({
+      actor: handle,
+    });
+
+    const did = profile.data.did;
+
+    // Create a block record
+    await agent.api.com.atproto.repo.createRecord({
+      repo: agentSession.did,
+      collection: "app.bsky.graph.block",
+      record: {
+        subject: did,
+        createdAt: new Date().toISOString(),
+      },
+    });
+  }
+}
+
 export async function getDetailedProfiles(
   agentSession: AtpSessionData,
   handles: string[]

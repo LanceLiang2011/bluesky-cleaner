@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { loginAndFetch, unfollowUsers, getDetailedProfiles } from "@/lib/bsk";
+import {
+  loginAndFetch,
+  unfollowUsers,
+  blockUsers,
+  getDetailedProfiles,
+} from "@/lib/bsk";
 
 export async function handleLogin(formData: FormData) {
   try {
@@ -107,6 +112,29 @@ export async function handleUnfollow(session: any, handles: string[]) {
     return {
       success: false,
       error: error.message || "Failed to unfollow users. Please try again.",
+    };
+  }
+}
+
+export async function handleBlock(session: any, handles: string[]) {
+  try {
+    // Since we're not using caching, we need the session to be passed explicitly
+    if (!handles || !handles.length) {
+      throw new Error("No handles provided to block.");
+    }
+
+    if (!session) {
+      throw new Error("Session not provided. Please login again.");
+    }
+
+    // Pass the session token and handles to block
+    await blockUsers(session, handles);
+
+    return { success: true };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || "Failed to block users. Please try again.",
     };
   }
 }

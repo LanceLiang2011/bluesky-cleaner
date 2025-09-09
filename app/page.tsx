@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import {
   handleLogin,
   handleUnfollow,
+  handleBlock,
   clearSession,
   handleGetDetailedProfiles,
 } from "./actions";
@@ -23,6 +24,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function HomePage() {
   // Authentication states
@@ -37,6 +47,7 @@ export default function HomePage() {
   // Dashboard states
   const [data, setData] = useState<any>(null);
   const [unfollowLoading, setUnfollowLoading] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
 
@@ -155,6 +166,41 @@ export default function HomePage() {
       toast.error("Failed to unfollow. Please try again.");
     } finally {
       setUnfollowLoading(false);
+    }
+  };
+
+  const blockSelected = async () => {
+    setBlockLoading(true);
+    try {
+      // Pass the session from the data state
+      if (!data || !data.session) {
+        toast.error("Session expired. Please login again.");
+        return;
+      }
+
+      await handleBlock(data.session, selected);
+      toast.success("Blocked successfully!");
+
+      // Update local state instead of refetching all data
+      if (data) {
+        // Create a new following array without the blocked users
+        const updatedFollowing = data.following.filter(
+          (user: any) => !selected.includes(user.handle)
+        );
+
+        // Update the data state with the modified following list
+        setData({
+          ...data,
+          following: updatedFollowing,
+        });
+      }
+
+      // Clear selected users after successful block
+      setSelected([]);
+    } catch (error) {
+      toast.error("Failed to block. Please try again.");
+    } finally {
+      setBlockLoading(false);
     }
   };
 
@@ -343,15 +389,58 @@ export default function HomePage() {
                     session={data.session}
                     onFetchDetailedProfiles={fetchDetailedProfiles}
                   />
-                  <Button
-                    onClick={unfollowSelected}
-                    disabled={unfollowLoading || selected.length === 0}
-                    className="mt-4 bg-red-600 hover:bg-red-700 text-white w-full"
-                  >
-                    {unfollowLoading
-                      ? "Unfollowing..."
-                      : `Unfollow ${selected.length} Selected`}
-                  </Button>
+                  <div className="mt-4 space-y-2">
+                    <Button
+                      onClick={unfollowSelected}
+                      disabled={
+                        unfollowLoading || blockLoading || selected.length === 0
+                      }
+                      className="bg-red-600 hover:bg-red-700 text-white w-full"
+                    >
+                      {unfollowLoading
+                        ? "Unfollowing..."
+                        : `Unfollow ${selected.length} Selected`}
+                    </Button>
+
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button
+                          disabled={
+                            unfollowLoading ||
+                            blockLoading ||
+                            selected.length === 0
+                          }
+                          variant="destructive"
+                          className="bg-gray-800 hover:bg-gray-900 text-white w-full"
+                        >
+                          {blockLoading
+                            ? "Blocking..."
+                            : `Block ${selected.length} Selected`}
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Confirm Block Action</DialogTitle>
+                          <DialogDescription>
+                            Are you sure you want to block {selected.length}{" "}
+                            selected user{selected.length > 1 ? "s" : ""}? This
+                            action will prevent them from seeing your posts and
+                            interacting with you.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                          <Button variant="outline">Cancel</Button>
+                          <Button
+                            variant="destructive"
+                            onClick={blockSelected}
+                            disabled={blockLoading}
+                          >
+                            {blockLoading ? "Blocking..." : "Block Users"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </>
               )}
             </CardContent>
