@@ -4,7 +4,12 @@
 
 import type React from "react";
 import { useState, useEffect } from "react";
-import { handleLogin, handleUnfollow, clearSession } from "./actions";
+import {
+  handleLogin,
+  handleUnfollow,
+  clearSession,
+  handleGetDetailedProfiles,
+} from "./actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
@@ -33,6 +38,8 @@ export default function HomePage() {
   const [data, setData] = useState<any>(null);
   const [unfollowLoading, setUnfollowLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
+  const [detailedProfilesLoading, setDetailedProfilesLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -66,6 +73,8 @@ export default function HomePage() {
           handle: result.handle,
           session: result.session,
         });
+        // Set detailed profiles from the login response
+        setDetailedProfiles(result.detailedProfiles || []);
         setIsLoggedIn(true);
         setRequires2FA(false); // Reset 2FA mode
         setTotpCode(""); // Clear TOTP code
@@ -98,6 +107,7 @@ export default function HomePage() {
     setIsLoggedIn(false);
     setData(null);
     setSelected([]);
+    setDetailedProfiles([]);
 
     // Show success message when logging out
     toast.success("Logged out successfully");
@@ -323,6 +333,7 @@ export default function HomePage() {
                     following={data.following}
                     selected={selected}
                     setSelected={setSelected}
+                    detailedProfiles={detailedProfiles}
                   />
                   <Button
                     onClick={unfollowSelected}

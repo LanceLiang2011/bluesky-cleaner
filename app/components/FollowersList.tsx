@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Slider } from "@/components/ui/slider";
 import { Search, UserCheck, UserX } from "lucide-react";
 
 export default function FollowersList({
@@ -16,21 +17,55 @@ export default function FollowersList({
   followers,
   selected,
   setSelected,
+  detailedProfiles,
 }: {
   following: any[];
   followers: any[];
   selected: string[];
   setSelected: (selected: string[]) => void;
+  detailedProfiles?: any[];
 }) {
   const [showNonFollowers, setShowNonFollowers] = useState(true);
+  const [maxPostCount, setMaxPostCount] = useState([100]); // Array for Slider value
+  const [enablePostFilter, setEnablePostFilter] = useState(false);
   const [search, setSearch] = useState("");
 
   const followerHandles = new Set(followers.map((f: any) => f.handle));
+
+  // Debug logging
+  console.log("Following sample:", following[0]);
+  console.log("Detailed profiles sample:", detailedProfiles?.[0]);
+  console.log("Total following:", following.length);
+  console.log("Total detailed profiles:", detailedProfiles?.length || 0);
+
+  // Create a map of detailed profiles for quick lookup
+  const detailedProfilesMap = new Map(
+    (detailedProfiles || []).map((profile: any) => [profile.handle, profile])
+  );
 
   const filtered = following
     .filter((f: any) =>
       showNonFollowers ? !followerHandles.has(f.handle) : true
     )
+    .filter((f: any) => {
+      if (!enablePostFilter) return true;
+
+      // Check if we have detailed profile data for this user
+      const detailedProfile = detailedProfilesMap.get(f.handle);
+      if (!detailedProfile) {
+        // If we don't have detailed data, we can't determine post count, so include them
+        console.log(`No detailed profile for ${f.handle}`);
+        return true;
+      }
+
+      // Check if user's post count is within the filter range
+      const postCount = detailedProfile.postsCount || 0;
+      const isWithinRange = postCount <= maxPostCount[0];
+      console.log(
+        `User ${f.handle}: postsCount = ${postCount}, maxAllowed = ${maxPostCount[0]}, included = ${isWithinRange}`
+      );
+      return isWithinRange;
+    })
     .filter((f: any) => new RegExp(search, "i").test(f.handle));
 
   const toggleSelect = (handle: string) => {
@@ -85,18 +120,66 @@ export default function FollowersList({
           </Badge>
         </CardTitle>
         <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="filter-mode"
-              checked={showNonFollowers}
-              onCheckedChange={setShowNonFollowers}
-            />
-            <label
-              htmlFor="filter-mode"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              Only show non-followers
-            </label>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="filter-mode"
+                checked={showNonFollowers}
+                onCheckedChange={setShowNonFollowers}
+              />
+              <label
+                htmlFor="filter-mode"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Only show non-followers
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="post-count-filter"
+                checked={enablePostFilter}
+                onCheckedChange={setEnablePostFilter}
+              />
+              <label
+                htmlFor="post-count-filter"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Filter by post count
+              </label>
+            </div>
+            {enablePostFilter && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Show users with ≤ {maxPostCount[0]} posts
+                  </span>
+                  {detailedProfiles?.length ? (
+                    <span className="text-xs text-muted-foreground">
+                      {filtered.length} users match
+                    </span>
+                  ) : null}
+                </div>
+                <Slider
+                  value={maxPostCount}
+                  onValueChange={setMaxPostCount}
+                  max={1000}
+                  min={0}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>0</span>
+                  <span>1000</span>
+                </div>
+              </div>
+            )}
+            {enablePostFilter && !detailedProfiles?.length && (
+              <div className="text-xs text-muted-foreground">
+                <span className="text-muted-foreground">
+                  Loading detailed profiles to enable filtering...
+                </span>
+              </div>
+            )}
           </div>
           <div className="relative w-full sm:w-auto">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -145,13 +228,22 @@ export default function FollowersList({
                           : user.handle.substring(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium">
                         {user.displayName || user.handle}
                       </p>
-                      <p className="text-sm text-muted-foreground">
-                        @{user.handle}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm text-muted-foreground">
+                          @{user.handle}
+                        </p>
+                        {detailedProfilesMap.get(user.handle) && (
+                          <Badge variant="secondary" className="text-xs">
+                            {detailedProfilesMap.get(user.handle).postsCount ||
+                              0}{" "}
+                            posts
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <Checkbox

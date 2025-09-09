@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
-import { loginAndFetch, unfollowUsers } from "@/lib/bsk";
+import { loginAndFetch, unfollowUsers, getDetailedProfiles } from "@/lib/bsk";
 
 export async function handleLogin(formData: FormData) {
   try {
@@ -44,6 +44,7 @@ export async function handleLogin(formData: FormData) {
       handle,
       followers: result.followers,
       following: result.following,
+      detailedProfiles: result.detailedProfiles || [], // Include detailed profiles from login
     };
   } catch (error: any) {
     console.error("Login error:", error.message, error.status, error.error);
@@ -115,4 +116,28 @@ export async function handleUnfollow(session: any, handles: string[]) {
 export async function clearSession() {
   // No need to clear cache as we're not using it
   return { success: true };
+}
+
+export async function handleGetDetailedProfiles(
+  session: any,
+  handles: string[]
+) {
+  try {
+    if (!handles || !handles.length) {
+      return { success: true, profiles: [] };
+    }
+
+    if (!session) {
+      throw new Error("Session not provided. Please login again.");
+    }
+
+    const profiles = await getDetailedProfiles(session, handles);
+    return { success: true, profiles };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || "Failed to fetch detailed profiles.",
+      profiles: [],
+    };
+  }
 }
