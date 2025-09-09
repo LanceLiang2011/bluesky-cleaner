@@ -269,26 +269,59 @@ export default function FollowersList({
                   className="flex items-center justify-between p-3 hover:bg-muted/50 cursor-pointer"
                   onClick={() => toggleSelect(user.handle)}
                 >
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        src={user.avatar}
-                        alt={user.displayName || user.handle}
-                      />
-                      <AvatarFallback>
-                        {user.displayName
-                          ? getInitials(user.displayName)
-                          : user.handle.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(
+                          `https://bsky.app/profile/${user.handle}`,
+                          "_blank"
+                        );
+                      }}
+                      className="cursor-pointer hover:opacity-80 transition-opacity"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={user.avatar}
+                          alt={user.displayName || user.handle}
+                        />
+                        <AvatarFallback>
+                          {user.displayName
+                            ? getInitials(user.displayName)
+                            : user.handle.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
                     <div className="flex-1">
-                      <p className="font-medium">
-                        {user.displayName || user.handle}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm text-muted-foreground">
-                          @{user.handle}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(
+                            `https://bsky.app/profile/${user.handle}`,
+                            "_blank"
+                          );
+                        }}
+                        className="cursor-pointer hover:text-blue-600 transition-colors inline-block"
+                      >
+                        <p className="font-medium">
+                          {user.displayName || user.handle}
                         </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(
+                              `https://bsky.app/profile/${user.handle}`,
+                              "_blank"
+                            );
+                          }}
+                          className="cursor-pointer hover:text-blue-600 transition-colors inline-block"
+                        >
+                          <p className="text-sm text-muted-foreground hover:text-blue-600 transition-colors">
+                            @{user.handle}
+                          </p>
+                        </div>
                         {detailedProfilesMap.get(user.handle) && (
                           <Badge variant="secondary" className="text-xs">
                             {detailedProfilesMap.get(user.handle).postsCount ||
@@ -299,16 +332,18 @@ export default function FollowersList({
                       </div>
                     </div>
                   </div>
-                  <Checkbox
-                    id={`select-${user.handle}`}
-                    checked={selected.includes(user.handle)}
-                    onCheckedChange={() => {
-                      // Prevent the click event from propagating to the li element
-                      // to avoid double toggling
-                      event?.stopPropagation();
-                      toggleSelect(user.handle);
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
                     }}
-                  />
+                    className="cursor-pointer p-2"
+                  >
+                    <Checkbox
+                      id={`select-${user.handle}`}
+                      checked={selected.includes(user.handle)}
+                      onCheckedChange={() => toggleSelect(user.handle)}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
