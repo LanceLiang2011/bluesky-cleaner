@@ -51,7 +51,23 @@ export default function HomePage() {
   const [unfollowLoading, setUnfollowLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
-  const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
+
+  // Detailed profiles managed at top level for each tab
+  const [detailedFollowingProfiles, setDetailedFollowingProfiles] = useState<
+    any[]
+  >([]);
+  const [detailedFollowersProfiles, setDetailedFollowersProfiles] = useState<
+    any[]
+  >([]);
+  const [
+    loadingDetailedFollowingProfiles,
+    setLoadingDetailedFollowingProfiles,
+  ] = useState(false);
+  const [
+    loadingDetailedFollowersProfiles,
+    setLoadingDetailedFollowersProfiles,
+  ] = useState(false);
+
   const [activeTab, setActiveTab] = useState("following");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -115,7 +131,10 @@ export default function HomePage() {
     setIsLoggedIn(false);
     setData(null);
     setSelected([]);
-    setDetailedProfiles([]);
+    setDetailedFollowingProfiles([]);
+    setDetailedFollowersProfiles([]);
+    setLoadingDetailedFollowingProfiles(false);
+    setLoadingDetailedFollowersProfiles(false);
     setHandle("");
     setPassword("");
     setTotpCode("");
@@ -142,6 +161,68 @@ export default function HomePage() {
       toast.error("Failed to load detailed profiles");
       throw error;
     }
+  };
+
+  // Function to fetch and set detailed profiles for a specific tab
+  const fetchDetailedProfilesForTab = async (
+    tabType: "following" | "followers"
+  ) => {
+    if (!data || !data.session) return;
+
+    // Set loading state for the appropriate tab
+    if (tabType === "following") {
+      setLoadingDetailedFollowingProfiles(true);
+    } else {
+      setLoadingDetailedFollowersProfiles(true);
+    }
+
+    try {
+      const handles =
+        tabType === "following"
+          ? data.following.map((f: any) => f.handle)
+          : data.followers.map((f: any) => f.handle);
+
+      const profiles = await fetchDetailedProfiles(data.session, handles);
+
+      if (tabType === "following") {
+        setDetailedFollowingProfiles(profiles);
+      } else {
+        setDetailedFollowersProfiles(profiles);
+      }
+    } catch (error) {
+      console.error(`Failed to fetch detailed profiles for ${tabType}:`, error);
+    } finally {
+      // Clear loading state for the appropriate tab
+      if (tabType === "following") {
+        setLoadingDetailedFollowingProfiles(false);
+      } else {
+        setLoadingDetailedFollowersProfiles(false);
+      }
+    }
+  };
+
+  // Function to update block status in detailed profiles
+  const updateBlockStatusInProfiles = (
+    handles: string[],
+    isBlocked: boolean
+  ) => {
+    // Update following profiles
+    setDetailedFollowingProfiles((prev) =>
+      prev.map((profile) =>
+        handles.includes(profile.handle)
+          ? { ...profile, viewer: { ...profile.viewer, blocking: isBlocked } }
+          : profile
+      )
+    );
+
+    // Update followers profiles
+    setDetailedFollowersProfiles((prev) =>
+      prev.map((profile) =>
+        handles.includes(profile.handle)
+          ? { ...profile, viewer: { ...profile.viewer, blocking: isBlocked } }
+          : profile
+      )
+    );
   };
   const unfollowSelected = async () => {
     setUnfollowLoading(true);
@@ -190,20 +271,8 @@ export default function HomePage() {
       await handleBlock(data.session, selected);
       toast.success("Blocked successfully!");
 
-      // Simple refetch: just re-login to get fresh data
-      const formData = new FormData();
-      formData.set("handle", handle);
-      formData.set("password", password);
-
-      const result = await handleLogin(formData);
-      if (result.success) {
-        setData({
-          followers: result.followers,
-          following: result.following,
-          handle: result.handle,
-          session: result.session,
-        });
-      }
+      // Update blocking status in both detailed profiles states
+      updateBlockStatusInProfiles(selected, true);
 
       // Clear selected users after successful block
       setSelected([]);
@@ -406,8 +475,11 @@ export default function HomePage() {
                       following={data.following}
                       selected={selected}
                       setSelected={setSelected}
-                      session={data.session}
-                      onFetchDetailedProfiles={fetchDetailedProfiles}
+                      detailedProfiles={detailedFollowingProfiles}
+                      loadingDetailedProfiles={loadingDetailedFollowingProfiles}
+                      onFetchDetailedProfiles={() =>
+                        fetchDetailedProfilesForTab("following")
+                      }
                     />
                     <div className="space-y-2">
                       <Button
@@ -470,8 +542,11 @@ export default function HomePage() {
                       followers={data.followers}
                       selected={selected}
                       setSelected={setSelected}
-                      session={data.session}
-                      onFetchDetailedProfiles={fetchDetailedProfiles}
+                      detailedProfiles={detailedFollowersProfiles}
+                      loadingDetailedProfiles={loadingDetailedFollowersProfiles}
+                      onFetchDetailedProfiles={() =>
+                        fetchDetailedProfilesForTab("followers")
+                      }
                     />
                     <div className="space-y-2">
                       <Dialog>
