@@ -194,7 +194,7 @@ export default function HomePage() {
       const formData = new FormData();
       formData.set("handle", handle);
       formData.set("password", password);
-      
+
       const result = await handleLogin(formData);
       if (result.success) {
         setData({
