@@ -43,11 +43,11 @@ export async function loginAndFetch(
       cursor = res.data.cursor;
     }
 
-    // Log a sample of following data structure
+    // Log a sample of 10 following data structure
     if (following.length > 0) {
       console.log(
         "Sample following user data:",
-        JSON.stringify(following[0], null, 2)
+        JSON.stringify(following.slice(0, 10), null, 2)
       );
     }
 
@@ -179,40 +179,97 @@ export async function getDetailedProfiles(
 
   const detailedProfiles = [];
 
-  // Batch requests in chunks to avoid overwhelming the API
-  const chunkSize = 25; // Reasonable batch size
-  for (let i = 0; i < handles.length; i += chunkSize) {
-    const chunk = handles.slice(i, i + chunkSize);
-    const promises = chunk.map(async (handle) => {
-      try {
-        const profile = await agent.api.app.bsky.actor.getProfile({
-          actor: handle,
-        });
+  // Optimized batch processing for large numbers of profiles
+  const BATCH_SIZE = 500; // Size of each batch for parallel processing
+  const CONCURRENT_BATCHES = 4; // Maximum number of batches to process simultaneously
+  const INDIVIDUAL_CHUNK_SIZE = 25; // Size for individual API calls within each batch
 
-        // Log the first detailed profile to see the structure
-        if (detailedProfiles.length === 0) {
-          console.log(
-            "Sample detailed profile data:",
-            JSON.stringify(profile.data, null, 2)
+  // Split handles into large batches
+  const batches = [];
+  for (let i = 0; i < handles.length; i += BATCH_SIZE) {
+    batches.push(handles.slice(i, i + BATCH_SIZE));
+  }
+
+  console.log(
+    `Processing ${handles.length} profiles in ${batches.length} batches of up to ${BATCH_SIZE} profiles each`
+  );
+
+  // Process batches with limited concurrency
+  for (let i = 0; i < batches.length; i += CONCURRENT_BATCHES) {
+    const currentBatches = batches.slice(i, i + CONCURRENT_BATCHES);
+
+    // Process multiple batches concurrently
+    const batchPromises = currentBatches.map(
+      async (batchHandles, batchIndex) => {
+        const batchResults = [];
+
+        // Within each batch, process in smaller chunks
+        for (let j = 0; j < batchHandles.length; j += INDIVIDUAL_CHUNK_SIZE) {
+          const chunk = batchHandles.slice(j, j + INDIVIDUAL_CHUNK_SIZE);
+
+          const chunkPromises = chunk.map(async (handle) => {
+            try {
+              const profile = await agent.api.app.bsky.actor.getProfile({
+                actor: handle,
+              });
+
+              // Log the first detailed profile to see the structure
+              if (detailedProfiles.length === 0 && batchResults.length === 0) {
+                console.log(
+                  "Sample detailed profile data:",
+                  JSON.stringify(profile.data, null, 2)
+                );
+              }
+
+              const serializedProfile = sanitizeForSerialization(profile.data);
+              return serializedProfile;
+            } catch (error) {
+              console.error(`Failed to fetch profile for ${handle}:`, error);
+              return null;
+            }
+          });
+
+          const chunkResults = await Promise.all(chunkPromises);
+          batchResults.push(
+            ...chunkResults.filter((profile) => profile !== null)
           );
+
+          // Small delay between chunks within a batch to be respectful
+          if (j + INDIVIDUAL_CHUNK_SIZE < batchHandles.length) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
         }
 
-        const serializedProfile = sanitizeForSerialization(profile.data);
-        return serializedProfile;
-      } catch (error) {
-        console.error(`Failed to fetch profile for ${handle}:`, error);
-        return null;
+        console.log(
+          `Completed batch ${i + batchIndex + 1}/${batches.length}: ${
+            batchResults.length
+          } profiles`
+        );
+        return batchResults;
       }
-    });
+    );
 
-    const results = await Promise.all(promises);
-    detailedProfiles.push(...results.filter((profile) => profile !== null));
+    // Wait for all current batches to complete
+    const batchesResults = await Promise.all(batchPromises);
 
-    // Add a small delay between batches to be respectful to the API
-    if (i + chunkSize < handles.length) {
-      await new Promise((resolve) => setTimeout(resolve, 100));
+    // Add all results to the main array
+    for (const batchResult of batchesResults) {
+      detailedProfiles.push(...batchResult);
+    }
+
+    // Add a delay between batch groups to be respectful to the API
+    if (i + CONCURRENT_BATCHES < batches.length) {
+      console.log(
+        `Completed ${
+          i + CONCURRENT_BATCHES
+        } batches, waiting before next group...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
   }
 
+  console.log(
+    `Successfully fetched ${detailedProfiles.length} detailed profiles out of ${handles.length} requested`
+  );
   return detailedProfiles;
 }
