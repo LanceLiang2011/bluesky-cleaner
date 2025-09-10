@@ -17,6 +17,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import FollowersList from "./components/FollowersList";
+import FollowersTab from "./components/FollowersTab";
 import {
   Card,
   CardContent,
@@ -33,6 +34,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function HomePage() {
   // Authentication states
@@ -50,6 +52,7 @@ export default function HomePage() {
   const [blockLoading, setBlockLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState("following");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -117,7 +120,13 @@ export default function HomePage() {
     setPassword("");
     setTotpCode("");
     setRequires2FA(false);
+    setActiveTab("following");
     toast.success("Successfully logged out!");
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSelected([]); // Clear selection when switching tabs
   };
 
   const fetchDetailedProfiles = async (session: any, handles: string[]) => {
@@ -367,81 +376,142 @@ export default function HomePage() {
         >
           <Card className="w-full h-full">
             <CardHeader>
-              <CardTitle className="text-2xl">Your Followers</CardTitle>
+              <CardTitle className="text-2xl">Account Management</CardTitle>
               <CardDescription>
-                Manage who you follow on Bluesky
+                Manage your following and followers on Bluesky
               </CardDescription>
             </CardHeader>
             <CardContent>
               {!isLoggedIn ? (
                 <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  <p>Login to see and manage your followers</p>
+                  <p>Login to see and manage your account</p>
                 </div>
               ) : !data ? (
                 <p className="text-center py-8">Loading your data...</p>
               ) : (
-                <>
-                  <FollowersList
-                    followers={data.followers}
-                    following={data.following}
-                    selected={selected}
-                    setSelected={setSelected}
-                    session={data.session}
-                    onFetchDetailedProfiles={fetchDetailedProfiles}
-                  />
-                  <div className="mt-4 space-y-2">
-                    <Button
-                      onClick={unfollowSelected}
-                      disabled={
-                        unfollowLoading || blockLoading || selected.length === 0
-                      }
-                      className="bg-red-600 hover:bg-red-700 text-white w-full"
-                    >
-                      {unfollowLoading
-                        ? "Unfollowing..."
-                        : `Unfollow ${selected.length} Selected`}
-                    </Button>
+                <Tabs
+                  value={activeTab}
+                  onValueChange={handleTabChange}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="following">Following</TabsTrigger>
+                    <TabsTrigger value="followers">Followers</TabsTrigger>
+                  </TabsList>
 
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button
-                          disabled={
-                            unfollowLoading ||
-                            blockLoading ||
-                            selected.length === 0
-                          }
-                          variant="destructive"
-                          className="bg-gray-800 hover:bg-gray-900 text-white w-full"
-                        >
-                          {blockLoading
-                            ? "Blocking..."
-                            : `Block ${selected.length} Selected`}
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Confirm Block Action</DialogTitle>
-                          <DialogDescription>
-                            Are you sure you want to block {selected.length}{" "}
-                            selected user{selected.length > 1 ? "s" : ""}? This
-                            action will prevent them from seeing your posts and
-                            interacting with you.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter>
-                          <Button variant="outline">Cancel</Button>
+                  <TabsContent value="following" className="space-y-4">
+                    <FollowersList
+                      followers={data.followers}
+                      following={data.following}
+                      selected={selected}
+                      setSelected={setSelected}
+                      session={data.session}
+                      onFetchDetailedProfiles={fetchDetailedProfiles}
+                    />
+                    <div className="space-y-2">
+                      <Button
+                        onClick={unfollowSelected}
+                        disabled={
+                          unfollowLoading ||
+                          blockLoading ||
+                          selected.length === 0
+                        }
+                        className="bg-red-600 hover:bg-red-700 text-white w-full"
+                      >
+                        {unfollowLoading
+                          ? "Unfollowing..."
+                          : `Unfollow ${selected.length} Selected`}
+                      </Button>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
                           <Button
+                            disabled={
+                              unfollowLoading ||
+                              blockLoading ||
+                              selected.length === 0
+                            }
                             variant="destructive"
-                            onClick={blockSelected}
-                            disabled={blockLoading}
+                            className="bg-gray-800 hover:bg-gray-900 text-white w-full"
                           >
-                            {blockLoading ? "Blocking..." : "Block Users"}
+                            {blockLoading
+                              ? "Blocking..."
+                              : `Block ${selected.length} Selected`}
                           </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Confirm Block Action</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to block {selected.length}{" "}
+                              selected user{selected.length > 1 ? "s" : ""}?
+                              This action will prevent them from seeing your
+                              posts and interacting with you.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline">Cancel</Button>
+                            <Button
+                              variant="destructive"
+                              onClick={blockSelected}
+                              disabled={blockLoading}
+                            >
+                              {blockLoading ? "Blocking..." : "Block Users"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="followers" className="space-y-4">
+                    <FollowersTab
+                      followers={data.followers}
+                      selected={selected}
+                      setSelected={setSelected}
+                      session={data.session}
+                      onFetchDetailedProfiles={fetchDetailedProfiles}
+                    />
+                    <div className="space-y-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            disabled={blockLoading || selected.length === 0}
+                            variant="destructive"
+                            className="bg-gray-800 hover:bg-gray-900 text-white w-full"
+                          >
+                            {blockLoading
+                              ? "Blocking..."
+                              : `Block ${selected.length} Selected Follower${
+                                  selected.length > 1 ? "s" : ""
+                                }`}
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Confirm Block Action</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to block {selected.length}{" "}
+                              selected follower{selected.length > 1 ? "s" : ""}?
+                              This action will prevent them from seeing your
+                              posts and interacting with you.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter>
+                            <Button variant="outline">Cancel</Button>
+                            <Button
+                              variant="destructive"
+                              onClick={blockSelected}
+                              disabled={blockLoading}
+                            >
+                              {blockLoading ? "Blocking..." : "Block Users"}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               )}
             </CardContent>
           </Card>
