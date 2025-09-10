@@ -282,6 +282,7 @@ export default function HomePage() {
       // Pass the session from the data state
       if (!data || !data.session) {
         toast.error("Session expired. Please login again.");
+        setBlockLoading(false);
         return;
       }
 
@@ -296,13 +297,13 @@ export default function HomePage() {
 
       // Close the dialog after successful block
       setIsBlockDialogOpen(false);
+      setBlockLoading(false);
     } catch (error) {
       toast.error("Failed to block. Please try again.");
-    } finally {
       setBlockLoading(false);
+      // Keep dialog open on error so user can retry
     }
   };
-
   return (
     <main className="min-h-screen bg-muted/30 p-4 md:p-8">
       <h1 className="text-2xl font-bold text-center mb-6">Bluesky Cleaner</h1>

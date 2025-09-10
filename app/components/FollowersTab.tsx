@@ -37,6 +37,36 @@ export default function FollowersTab({
     (detailedProfiles || []).map((profile: any) => [profile.handle, profile])
   );
 
+  // Calculate loading progress and completion status
+  const totalUsers = followers.length;
+  const loadedUsers = detailedProfiles?.length || 0;
+  const loadingProgress =
+    totalUsers > 0 ? Math.round((loadedUsers / totalUsers) * 100) : 0;
+
+  // Determine if detailed data loading is complete
+  const isDetailedDataComplete =
+    !(enablePostFilter || showBlockedFilter) ||
+    (!loadingDetailedProfiles &&
+      detailedProfiles &&
+      detailedProfiles.length > 0);
+
+  // Show loading state when filters are enabled AND we're actively loading OR have incomplete data
+  const shouldShowLoadingState =
+    (enablePostFilter || showBlockedFilter) &&
+    (loadingDetailedProfiles || (detailedProfiles?.length || 0) < totalUsers);
+
+  console.log("FollowersTab loading state debug:", {
+    enablePostFilter,
+    showBlockedFilter,
+    totalUsers,
+    loadedUsers,
+    loadingProgress,
+    isDetailedDataComplete,
+    shouldShowLoadingState,
+    loadingDetailedProfiles,
+    hasDetailedProfiles: !!detailedProfiles,
+  });
+
   const filtered = followers
     .filter((f: any) => {
       if (!enablePostFilter) return true;
@@ -196,13 +226,22 @@ export default function FollowersTab({
       </CardHeader>
       <CardContent>
         <div className="border rounded-md h-80 overflow-y-auto">
-          {(enablePostFilter || showBlockedFilter) &&
-          loadingDetailedProfiles &&
-          !detailedProfiles?.length ? (
+          {shouldShowLoadingState ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="flex flex-col items-center gap-3">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                <span>Loading detailed profiles to enable filtering...</span>
+                <div className="text-center">
+                  <div className="font-medium">
+                    Loading detailed profiles...
+                  </div>
+                  <div className="text-sm mt-1">
+                    {loadedUsers} / {totalUsers} profiles loaded (
+                    {loadingProgress}%)
+                  </div>
+                  <div className="text-xs mt-1 text-muted-foreground">
+                    Please wait while we fetch all user details
+                  </div>
+                </div>
               </div>
             </div>
           ) : filtered.length === 0 ? (
