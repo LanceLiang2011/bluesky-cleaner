@@ -36,6 +36,7 @@ export async function loginAndFetch(
       const res = await agent.api.app.bsky.graph.getFollows({
         actor: handle,
         cursor,
+        limit: 100,
       });
       following.push(...res.data.follows);
       if (!res.data.cursor) break;
@@ -56,6 +57,7 @@ export async function loginAndFetch(
       const res = await agent.api.app.bsky.graph.getFollowers({
         actor: handle,
         cursor,
+        limit: 100,
       });
       followers.push(...res.data.followers);
       if (!res.data.cursor) break;

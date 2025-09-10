@@ -190,17 +190,18 @@ export default function HomePage() {
       await handleBlock(data.session, selected);
       toast.success("Blocked successfully!");
 
-      // Update local state instead of refetching all data
-      if (data) {
-        // Create a new following array without the blocked users
-        const updatedFollowing = data.following.filter(
-          (user: any) => !selected.includes(user.handle)
-        );
-
-        // Update the data state with the modified following list
+      // Simple refetch: just re-login to get fresh data
+      const formData = new FormData();
+      formData.set("handle", handle);
+      formData.set("password", password);
+      
+      const result = await handleLogin(formData);
+      if (result.success) {
         setData({
-          ...data,
-          following: updatedFollowing,
+          followers: result.followers,
+          following: result.following,
+          handle: result.handle,
+          session: result.session,
         });
       }
 
