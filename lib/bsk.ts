@@ -10,12 +10,16 @@ export async function loginAndFetch(
   const agent = new BskyAgent({ service: "https://bsky.social" });
 
   try {
+    console.log("Attempting login with handle:", JSON.stringify(handle));
+
     // SECURITY: We directly pass the credentials to the API without storing them
     await agent.login({
       identifier: handle,
       password,
       ...(totpCode ? { authFactorToken: totpCode } : {}),
     });
+
+    console.log("Login successful for handle:", handle);
 
     // SECURITY: Create a clean session object without the password or any sensitive data
     const session = {

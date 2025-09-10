@@ -26,22 +26,28 @@ export async function handleLogin(formData: FormData) {
       };
     }
 
+    // Log original handle for debugging
+    console.log("Original handle:", JSON.stringify(handle));
+
     // Remove leading @ if present
     if (handle.startsWith("@")) {
       handle = handle.slice(1);
     }
 
-    // Clean handle from invisible Unicode characters and normalize
+    // Clean handle carefully to preserve domain integrity
+    // Only remove truly problematic invisible characters that break URLs
     handle = handle
       .trim()
-      .toLowerCase()
-      // Remove invisible Unicode characters like U+202C (Pop Directional Formatting)
-      .replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F]/g, "")
-      // Remove other common invisible characters
-      .replace(/[\u00A0\u1680\u2000-\u200A\u2028\u2029\u205F\u3000]/g, " ")
-      // Clean up multiple spaces
-      .replace(/\s+/g, " ")
+      // Remove zero-width spaces and similar invisible characters
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      // Remove directional formatting characters
+      .replace(/[\u2060-\u2069]/g, "")
       .trim();
+
+    // Don't lowercase or do other modifications - let BskyAgent handle domain resolution
+
+    // Log cleaned handle for debugging
+    console.log("Cleaned handle:", JSON.stringify(handle));
 
     const result = await loginAndFetch(handle, password, totpCode || undefined);
 
@@ -108,6 +114,18 @@ export async function handleLogin(formData: FormData) {
     }
 
     if (error.status === 400) {
+      // Check if it's a handle resolution issue
+      if (
+        error.message?.toLowerCase().includes("handle") ||
+        error.message?.toLowerCase().includes("identifier") ||
+        error.message?.toLowerCase().includes("invalid")
+      ) {
+        return {
+          success: false,
+          error:
+            "Invalid handle format. For custom domains like example.com, make sure the domain is properly configured for Bluesky.",
+        };
+      }
       return {
         success: false,
         error: "Invalid request format. Please check your username format.",
