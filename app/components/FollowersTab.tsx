@@ -27,6 +27,7 @@ export default function FollowersTab({
 }) {
   const [maxPostCount, setMaxPostCount] = useState([100]); // Array for Slider value
   const [enablePostFilter, setEnablePostFilter] = useState(false);
+  const [showOnlyNonBlocked, setShowOnlyNonBlocked] = useState(false);
   const [search, setSearch] = useState("");
   const [detailedProfiles, setDetailedProfiles] = useState<any[]>([]);
   const [loadingDetailedProfiles, setLoadingDetailedProfiles] = useState(false);
@@ -61,10 +62,10 @@ export default function FollowersTab({
     }
   }, [session, loadingDetailedProfiles, followers, onFetchDetailedProfiles]);
 
-  // Fetch detailed profiles when post filter is enabled
+  // Fetch detailed profiles when post filter or blocked filter is enabled
   useEffect(() => {
     if (
-      enablePostFilter &&
+      (enablePostFilter || showOnlyNonBlocked) &&
       detailedProfiles.length === 0 &&
       !loadingDetailedProfiles
     ) {
@@ -72,6 +73,7 @@ export default function FollowersTab({
     }
   }, [
     enablePostFilter,
+    showOnlyNonBlocked,
     detailedProfiles.length,
     loadingDetailedProfiles,
     fetchDetailedProfiles,
@@ -110,6 +112,20 @@ export default function FollowersTab({
         `Follower ${f.handle}: postsCount = ${postCount}, maxAllowed = ${maxPostCount[0]}, included = ${isWithinRange}`
       );
       return isWithinRange;
+    })
+    .filter((f: any) => {
+      if (!showOnlyNonBlocked) return true;
+
+      // Check if user is blocked
+      const detailedProfile = detailedProfilesMap.get(f.handle);
+      if (!detailedProfile) {
+        // If we don't have detailed data, assume not blocked
+        return true;
+      }
+
+      // Check viewer.blocking status - if true, user is blocked
+      const isBlocked = detailedProfile.viewer?.blocking;
+      return !isBlocked; // Only include if NOT blocked
     })
     .filter((f: any) => new RegExp(search, "i").test(f.handle));
 
@@ -175,6 +191,19 @@ export default function FollowersTab({
                 Filter by post count
               </label>
             </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="blocked-filter-followers"
+                checked={showOnlyNonBlocked}
+                onCheckedChange={setShowOnlyNonBlocked}
+              />
+              <label
+                htmlFor="blocked-filter-followers"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                Only show non-blocked users
+              </label>
+            </div>
             {enablePostFilter && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -230,7 +259,7 @@ export default function FollowersTab({
       </CardHeader>
       <CardContent>
         <div className="border rounded-md h-80 overflow-y-auto">
-          {enablePostFilter &&
+          {(enablePostFilter || showOnlyNonBlocked) &&
           loadingDetailedProfiles &&
           !detailedProfiles?.length ? (
             <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -305,11 +334,18 @@ export default function FollowersTab({
                           </p>
                         </div>
                         {detailedProfilesMap.get(user.handle) && (
-                          <Badge variant="secondary" className="text-xs">
-                            {detailedProfilesMap.get(user.handle).postsCount ||
-                              0}{" "}
-                            posts
-                          </Badge>
+                          <>
+                            <Badge variant="secondary" className="text-xs">
+                              {detailedProfilesMap.get(user.handle).postsCount ||
+                                0}{" "}
+                              posts
+                            </Badge>
+                            {detailedProfilesMap.get(user.handle).viewer?.blocking && (
+                              <Badge variant="destructive" className="text-xs">
+                                Blocked
+                              </Badge>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
