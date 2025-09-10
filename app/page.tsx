@@ -51,6 +51,7 @@ export default function HomePage() {
   const [unfollowLoading, setUnfollowLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [isBlockDialogOpen, setIsBlockDialogOpen] = useState(false);
 
   // Detailed profiles managed at top level for each tab
   const [detailedFollowingProfiles, setDetailedFollowingProfiles] = useState<
@@ -172,8 +173,10 @@ export default function HomePage() {
     // Set loading state for the appropriate tab
     if (tabType === "following") {
       setLoadingDetailedFollowingProfiles(true);
+      setDetailedFollowingProfiles([]); // Clear existing profiles to show loading state
     } else {
       setLoadingDetailedFollowersProfiles(true);
+      setDetailedFollowersProfiles([]); // Clear existing profiles to show loading state
     }
 
     try {
@@ -182,7 +185,15 @@ export default function HomePage() {
           ? data.following.map((f: any) => f.handle)
           : data.followers.map((f: any) => f.handle);
 
+      console.log(
+        `Starting to fetch detailed profiles for ${tabType}: ${handles.length} users`
+      );
+
       const profiles = await fetchDetailedProfiles(data.session, handles);
+
+      console.log(
+        `Finished fetching detailed profiles for ${tabType}: ${profiles.length} profiles loaded`
+      );
 
       if (tabType === "following") {
         setDetailedFollowingProfiles(profiles);
@@ -191,6 +202,12 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error(`Failed to fetch detailed profiles for ${tabType}:`, error);
+      // Reset profiles on error
+      if (tabType === "following") {
+        setDetailedFollowingProfiles([]);
+      } else {
+        setDetailedFollowersProfiles([]);
+      }
     } finally {
       // Clear loading state for the appropriate tab
       if (tabType === "following") {
@@ -276,6 +293,9 @@ export default function HomePage() {
 
       // Clear selected users after successful block
       setSelected([]);
+
+      // Close the dialog after successful block
+      setIsBlockDialogOpen(false);
     } catch (error) {
       toast.error("Failed to block. Please try again.");
     } finally {
@@ -496,7 +516,10 @@ export default function HomePage() {
                           : `Unfollow ${selected.length} Selected`}
                       </Button>
 
-                      <Dialog>
+                      <Dialog
+                        open={isBlockDialogOpen}
+                        onOpenChange={setIsBlockDialogOpen}
+                      >
                         <DialogTrigger asChild>
                           <Button
                             disabled={
@@ -523,7 +546,12 @@ export default function HomePage() {
                             </DialogDescription>
                           </DialogHeader>
                           <DialogFooter>
-                            <Button variant="outline">Cancel</Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setIsBlockDialogOpen(false)}
+                            >
+                              Cancel
+                            </Button>
                             <Button
                               variant="destructive"
                               onClick={blockSelected}
