@@ -45,6 +45,7 @@ export async function handleLogin(formData: FormData) {
       .trim();
 
     // Don't lowercase or do other modifications - let BskyAgent handle domain resolution
+    console.log("Normalized handle:", JSON.stringify(handle));
 
     // Log cleaned handle for debugging
     console.log("Cleaned handle:", JSON.stringify(handle));
@@ -71,7 +72,7 @@ export async function handleLogin(formData: FormData) {
   } catch (error: any) {
     console.error("Login error:", error.message, error.status, error.error);
 
-    // Improved error handling for 2FA-related errors
+    // Only handle 2FA detection specifically
     if (
       (error.status === 401 || error.status === 400) &&
       (error.message?.toLowerCase().includes("authentication") ||
@@ -87,67 +88,7 @@ export async function handleLogin(formData: FormData) {
       };
     }
 
-    // Handle specific error types with more helpful messages
-    if (error.status === 429) {
-      return {
-        success: false,
-        error:
-          "Too many login attempts. Please wait a few minutes and try again.",
-      };
-    }
-
-    if (error.status === 401) {
-      // More specific error messages for authentication failures
-      if (error.message?.toLowerCase().includes("app password")) {
-        return {
-          success: false,
-          error:
-            "Please use an App Password instead of your regular password. Generate one in your Bluesky settings.",
-        };
-      }
-
-      return {
-        success: false,
-        error:
-          "Invalid username or password. Make sure you're using an App Password if you have 2FA enabled.",
-      };
-    }
-
-    if (error.status === 400) {
-      // Check if it's a handle resolution issue
-      if (
-        error.message?.toLowerCase().includes("handle") ||
-        error.message?.toLowerCase().includes("identifier") ||
-        error.message?.toLowerCase().includes("invalid")
-      ) {
-        return {
-          success: false,
-          error:
-            "Invalid handle format. For custom domains like example.com, make sure the domain is properly configured for Bluesky.",
-        };
-      }
-      return {
-        success: false,
-        error: "Invalid request format. Please check your username format.",
-      };
-    }
-
-    // Handle network errors
-    if (error.message?.includes("network") || error.name === "NetworkError") {
-      return {
-        success: false,
-        error: "Network error. Please check your connection and try again.",
-      };
-    }
-
-    if (error.message?.includes("fetch")) {
-      return {
-        success: false,
-        error: "Connection failed. Please check your internet connection.",
-      };
-    }
-
-    // Generic error handling
+    // Just return the actual server error message
     return {
       success: false,
       error: error.message || "Login failed. Please try again.",
